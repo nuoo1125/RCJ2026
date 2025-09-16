@@ -5,10 +5,17 @@
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
 #include "ws2812.pio.h"
+
 #include "config.h"
+#include "motor/motor.h"
 #include "VL53L0X/VL53L0X.h"
 #include "gyro/gyro.h"
-#include "mcp3208/mcp3208.h"
 #include "servo/servo.h"
-#include "stepper/stepper.h"
 #include "interface/interface.h"
+
+int main(){
+    TB67H450 moter_l(1,2,false);
+    TB67H450 motor_r(3,4,true);
+    VL53L0X tof_l(i2c0);
+    VL53L0X tof_r(i2c1);
+}
