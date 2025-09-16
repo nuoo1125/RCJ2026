@@ -14,8 +14,7 @@
 #include "interface/interface.h"
 
 int main(){
-    TB67H450 moter_l(1,2,false);
-    TB67H450 motor_r(3,4,true);
+    DualMotor motor(1,2,false,3,4,true);
     VL53L0X tof_l(i2c0);
     VL53L0X tof_r(i2c1);
 }
