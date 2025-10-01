@@ -13,7 +13,7 @@ target_include_directories(RCJ2026 PRIVATE
 )
 target_include_directories(RCJ2026 PRIVATE ../lib)
 
-target_link_libraries(RCJ2026 stepper gyro VL53L0X servo mcp3208 interface motor)
+target_link_libraries(RCJ2026  gyro VL53L0X servo interface motor pico_bootsel_via_double_reset)
 target_link_libraries(RCJ2026 pico_stdlib hardware_pwm hardware_spi hardware_i2c hardware_pio hardware_clocks hardware_uart)
 
 pico_add_extra_outputs(RCJ2026)

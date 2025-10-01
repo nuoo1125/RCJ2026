@@ -1,45 +1,41 @@
 #pragma once
+//基本的に左から一番二番にしてある
+//tx/rxはマイコンから見て
 //gyro系
-#define gyro_reset 20
-#define gyro_i2c i2c1
-#define SDA_PIN 18
-#define SCL_PIN 19
+#define gyro_reset 14
+#define gyro_i2c i2c0 
+#define gyro_sda 16
+#define gyro_scl 17
 #define ADDRESS 0x28
 #define EULER_REGISTER 0x1A
-//stepper系
-#define clock_l 5
-#define direction_l  4
-#define clock_r 7
-#define direction_r 6 
-#define sleep 3
-#define reset 2
-#define step_angle 0.9
+//dc系
+#define dc_left_1 8
+#define dc_left_2 9
+#define dc_right_1 6
+#define dc_right_2 7
 //tof系
 #define VL53L0X_DEFAULT_ADDRESS 0x29
-#define tof_1 i2c1
-#define tof_2 i2c0
-#define SDA_TOF1 16
-#define SCL_TOF1 17
-#define xshut2 15
-#define xshut1 14
-//mcp3208系
-#define SPI_PIN_SCK  10
-#define SPI_PIN_MOSI 11
-#define SPI_PIN_MISO 12
-#define SPI_PIN_CS   13
-#define SPI_PORT spi1
+#define tof_1 i2c0
+#define tof_2 i2c1
+#define sda_tof1 16
+#define scl_tof1 17
+#define sda_tof2 10
+#define scl_tof2 11
+#define xshut2 3
+#define xshut1 2
 //servo系
-#define gpio 28 //arm
-#define gpio2 27 //arm
-#define gpio3 26 //arm up/down
-#define gpio4 22 //ひも引っ張る
-#define gpio5 21 //rock
+#define servo_1 20  
+#define servo_2 21 //わんちゃん干渉する
+#define servo_3 22 
+#define servo_4 27 
 //deabgu系
-#define buzzer_pin 0
+#define buzzer_pin 15
 #define led 25
 #define WS2812_PIN 1
-//camera
+//センサ系
 #define UART_ID uart1
 #define BAUD_RATE 115200
-#define UART_TX_PIN 8 
-#define UART_RX_PIN 9  
+#define tx_pin1 12 
+#define rx_pin1 13 
+#define tx_pin2 4
+#define rx_pin2 5

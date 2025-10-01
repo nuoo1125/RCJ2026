@@ -14,7 +14,23 @@
 #include "interface/interface.h"
 
 int main(){
-    DualMotor motor(1,2,false,3,4,true);
-    VL53L0X tof_l(i2c0);
-    VL53L0X tof_r(i2c1);
+    stdio_init_all();
+    init_bno055();
+    VL53L0X tof_left(tof_1,VL53L0X_DEFAULT_ADDRESS);
+    VL53L0X tof_right(tof_2,VL53L0X_DEFAULT_ADDRESS);    
+    DualMotor motor(dc_left_1,dc_left_2,true,dc_right_1,dc_right_2,false);
+    SERVO servo_left(servo_1);
+    SERVO servo_right(servo_2);
+    uart_init(UART_ID, BAUD_RATE);
+    gpio_set_function(tx_pin1, GPIO_FUNC_UART);
+    gpio_set_function(rx_pin1, GPIO_FUNC_UART);
+    //ここまで設定
+    led_on();
+    ws2812_program_init(WS2812_PIN,800000,IS_RGBW);
+    while (true) {
+        red_led();
+        sleep_ms(1000);
+        blue_led();
+        sleep_ms(1000);
+    }
 }
