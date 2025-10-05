@@ -14,6 +14,8 @@ TB67H450::TB67H450(int in1, int in2,bool forward) {
     uint slice2 = pwm_gpio_to_slice_num(pin_in2);
     float clkdiv = 1.0f;
     uint32_t wrap = 24999;
+    pwm_set_clkdiv(slice1,clkdiv);
+    pwm_set_clkdiv(slice2,clkdiv);
     pwm_set_wrap(slice1, wrap);
     pwm_set_wrap(slice2, wrap);
     pwm_set_enabled(slice1, true);
@@ -22,6 +24,7 @@ TB67H450::TB67H450(int in1, int in2,bool forward) {
 }
 
 void TB67H450::setPWM(int pin, float duty) {
+    duty = fminf(fmaxf(duty, 0.0f), 1.0f); 
     uint slice = pwm_gpio_to_slice_num(pin);
     uint channel = pwm_gpio_to_channel(pin);
     pwm_set_chan_level(slice, channel, (uint16_t)(duty * 24999));
@@ -29,13 +32,15 @@ void TB67H450::setPWM(int pin, float duty) {
 
 void TB67H450::run(float speed){
     if(!direction)speed *= -1;
-    if(speed > 0){
+    if(speed > 1.0f) speed = 1.0f;
+    if(speed < -1.0f) speed = -1.0f;
+    if(speed > 0.0f){
         setPWM(pin_in1, speed);
         setPWM(pin_in2, 0.0f); 
     } 
     else{
         setPWM(pin_in1, 0.0f);
-        setPWM(pin_in2, speed);    
+        setPWM(pin_in2, fabs(speed));    
     }
 }
 
@@ -53,24 +58,29 @@ motor_l(in1_l, in2_l, forward_l) {
         pin2_r = in2_r;
 }
 void DualMotor::setPWM(int pin, float duty) {
+    duty = fminf(fmaxf(duty, 0.0f), 1.0f);
     uint slice = pwm_gpio_to_slice_num(pin);
     uint channel = pwm_gpio_to_channel(pin);
     pwm_set_chan_level(slice, channel, (uint16_t)(duty * 24999));
 }
 
-void DualMotor::run(float speed){
-    motor_r.run(speed);
-    motor_l.run(speed);
+void DualMotor::run(float speed_l,float speed_r){
+    motor_r.run(speed_r);
+    motor_l.run(speed_l);
 }
 void DualMotor::turn(int16_t target_angle){
     target_angle = (target_angle + 720) % 360;
     int16_t current_angle = read_angle();
-    while(abs(target_angle-current_angle)>=0.5){
-        motor_r.run(1.0f);
-        motor_l.run(-1.0f);
+    while(abs(target_angle-current_angle)>=2){
+        float error = target_angle - current_angle;
+        float speed = 0.02f * error;
+        if (speed > 1.0f) speed = 1.0f;
+        if (speed < -1.0f) speed = -1.0f;
+        motor_r.run(speed);
+        motor_l.run(-speed);
         current_angle = read_angle();
     }
-   printf("finish!");
+   printf("finish!");  
 }
 void DualMotor::stop(float time){
     setPWM(pin1_l,1.0f);    

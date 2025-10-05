@@ -4,6 +4,7 @@
 #include "hardware/pio.h"
 #include "hardware/i2c.h"
 #include "hardware/pwm.h"
+#include "hardware/uart.h"
 #include "ws2812.pio.h"
 
 #include "config.h"
@@ -12,10 +13,13 @@
 #include "gyro/gyro.h"
 #include "servo/servo.h"
 #include "interface/interface.h"
+#include "camera/camera.h"
+float angle = 0;
 
 int main(){
     stdio_init_all();
     init_bno055();
+    ControlPacket packet;
     VL53L0X tof_left(tof_1,VL53L0X_DEFAULT_ADDRESS);
     VL53L0X tof_right(tof_2,VL53L0X_DEFAULT_ADDRESS);    
     DualMotor motor(dc_left_1,dc_left_2,true,dc_right_1,dc_right_2,false);
@@ -27,10 +31,11 @@ int main(){
     //ここまで設定
     led_on();
     ws2812_program_init(WS2812_PIN,800000,IS_RGBW);
+    blue_led();
     while (true) {
-        red_led();
-        sleep_ms(1000);
-        blue_led();
-        sleep_ms(1000);
+        motor.run(1.0f,1.0f);
+        angle = read_angle();
+        printf("angle :%.2f\n",angle);
+        //   camera_line(&packet);
     }
 }

@@ -5,6 +5,7 @@
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 
+
 class TB67H450{
     private:
         uint pin_in1;
@@ -27,7 +28,7 @@ class DualMotor{
         void setPWM(int pin, float duty); 
     public:
         DualMotor(int in1_l,int in2_l,bool forward_l,int in1_r,int in2_r,bool forward_r);
-        void run(float speed);
+        void run(float speed_l,float spped_r);
         void turn(int16_t target_angle);
         // void turnRight();
         void stop(float time);
