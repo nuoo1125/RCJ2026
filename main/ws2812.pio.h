@@ -120,5 +120,5 @@ void red_led(){set_pixel_color(0,120,0);}
 void green_led(){set_pixel_color(80,0,20);}
 void blue_led(){set_pixel_color(120,0,120);}
 void yellow_led(){set_pixel_color(120,120,0);}
-void black_led(){set_pixel_color(0,0,0);}
+void white_led(){set_pixel_color(120,120,120);}
 #endif

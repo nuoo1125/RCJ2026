@@ -22,7 +22,7 @@ int main(){
     ControlPacket packet;
     VL53L0X tof_left(tof_1,VL53L0X_DEFAULT_ADDRESS);
     VL53L0X tof_right(tof_2,VL53L0X_DEFAULT_ADDRESS);    
-    DualMotor motor(dc_left_1,dc_left_2,true,dc_right_1,dc_right_2,false);
+    DualMotor motor(dc_left_1,dc_left_2,true,dc_right_1,dc_right_2,true);
     SERVO servo_left(servo_1);
     SERVO servo_right(servo_2);
     uart_init(UART_ID, BAUD_RATE);
@@ -31,11 +31,19 @@ int main(){
     //ここまで設定
     led_on();
     ws2812_program_init(WS2812_PIN,800000,IS_RGBW);
-    blue_led();
     while (true) {
-        motor.run(1.0f,1.0f);
-        angle = read_angle();
-        printf("angle :%.2f\n",angle);
-        //   camera_line(&packet);
+        motor.turn(0);
+        sleep_ms(1000);
+        motor.turn(90);
+        sleep_ms(1000);
+        motor.turn(180);
+        sleep_ms(1000);
+        motor.turn(270);
+        sleep_ms(1000);
+        // angle = read_angle();
+        // printf("angle :%.2f\n",angle);
+        // if(angle>180)blue_led();
+        // else red_led();
+        //camera_line(&packet);
     }
 }
