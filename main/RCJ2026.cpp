@@ -18,6 +18,10 @@ float angle = 0;
 
 int main(){
     stdio_init_all();
+    gpio_put(gyro_reset,1);
+    sleep_ms(100);
+    gpio_put(gyro_reset,0);
+    sleep_ms(1000);
     init_bno055();
     ControlPacket packet;
     VL53L0X tof_left(tof_1,VL53L0X_DEFAULT_ADDRESS);
@@ -31,17 +35,21 @@ int main(){
     //ここまで設定
     led_on();
     ws2812_program_init(WS2812_PIN,800000,IS_RGBW);
-    while (true) {
+    motor.run(0.8f,0.8f);
+    sleep_ms(200);
+    while(true) {
         motor.turn(0);
-        sleep_ms(1000);
+        blue_led();
+        sleep_ms(2000);
         motor.turn(90);
-        sleep_ms(1000);
+        red_led();
+        sleep_ms(2000);
         motor.turn(180);
-        sleep_ms(1000);
+        green_led();
+        sleep_ms(2000);
         motor.turn(270);
-        sleep_ms(1000);
-        // angle = read_angle();
-        // printf("angle :%.2f\n",angle);
+        yellow_led();
+        sleep_ms(2000);
         // if(angle>180)blue_led();
         // else red_led();
         //camera_line(&packet);

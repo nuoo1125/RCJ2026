@@ -12,7 +12,7 @@ extern "C" {
 #endif
 int16_t merge(uint8_t low, uint8_t high);
 void init_bno055();
-int16_t read_angle();
+float read_angle();
 #ifdef __cplusplus
 }
 #endif

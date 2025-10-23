@@ -29,7 +29,7 @@ class DualMotor{
     public:
         DualMotor(int in1_l,int in2_l,bool forward_l,int in1_r,int in2_r,bool forward_r);
         void run(float speed_l,float spped_r);
-        void turn(int16_t target_angle);
+        void turn(int target_angle);
         // void turnRight();
         void stop(float time);
 };

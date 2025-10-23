@@ -32,8 +32,8 @@ void TB67H450::setPWM(int pin, float duty) {
 
 void TB67H450::run(float speed){
     if(!direction)speed *= -1;
-    if(speed > 1.0f) speed = 1.0f;
-    if(speed < -1.0f) speed = -1.0f;
+    if(speed > 0.8f) speed = 0.8f;
+    if(speed < -0.8f) speed = -0.8f;
     if(speed > 0.0f){
         setPWM(pin_in1, speed);
         setPWM(pin_in2, 0.0f); 
@@ -68,48 +68,37 @@ void DualMotor::run(float speed_l,float speed_r){
     motor_r.run(speed_r);
     motor_l.run(speed_l);
 }
-void DualMotor::turn(int16_t target_angle){
+
+void DualMotor::turn(int target_angle){
     target_angle = (target_angle % 360 + 360) % 360;
-
-    int16_t current_angle = read_angle();
-    current_angle = (current_angle % 360 + 360) % 360;
-
-    const int16_t stop_threshold = 1;   
-    const int16_t restart_threshold = 5; 
-    bool turning = true;
+    if(target_angle < 0) target_angle += 360;
     while (true) {
-        int diff = (int)target_angle - (int)current_angle;
-        diff = (diff + 540) % 360 - 180; // -180..179
-        if (turning) {
-            // 目標に到達したら停止
-            if (abs(diff) <= stop_threshold) {
-                stop(50);
-                turning = false;
-            } else {
-                float speed = fminf(fmaxf(fabsf((float)diff) / 90.0f, 0.25f), 1.0f);
-                if (diff > 0) {
-                    motor_r.run( speed);
-                    motor_l.run(-speed);
-                } else {
-                    motor_r.run(-speed);
-                    motor_l.run( speed);
-                }
-            }
-        } else {
-            if (abs(diff) > restart_threshold) {
-                turning = true;
-            }
-        }
-        sleep_ms(10);
-        current_angle = read_angle();
-        current_angle = (current_angle % 360 + 360) % 360;
-
-        if (!turning && abs(diff) <= stop_threshold) {
+        float raw_angle = read_angle();
+        if (raw_angle < 0) raw_angle += 360.0f;
+        float current_angle = raw_angle;
+        float diff = target_angle - current_angle;
+        if (diff > 180) diff -= 360;
+        if (diff < -180) diff += 360;
+        float speed = fminf(fmaxf(fabsf((float)diff) / 90.0f, 0.3f), 0.80f);
+        
+        if (fabs(diff) < 0.1f) {
+            stop(50);
+            printf("finish! T:%.2f C:%.2f D:%.2f\n", target_angle, current_angle, diff);
             break;
         }
+        if (diff > 0) {
+            motor_r.run(-speed);
+            motor_l.run(speed);
+        } else {
+            motor_r.run(speed);
+            motor_l.run(-speed);
+        }
+
+        printf("T:%.2f C:%.2f D:%.2f\n", target_angle, current_angle, diff);
+        sleep_ms(20);
     }
-    printf("finish!\n");
 }
+
 
 void DualMotor::stop(float time){
     setPWM(pin1_l,1.0f);    

@@ -51,11 +51,13 @@ void init_bno055() {
         i2c_write_blocking(gyro_i2c, ADDRESS, data, 2, false); 
         sleep_ms(delay); 
     }
+    gpio_set_dir(gyro_reset,GPIO_OUT);
     printf("BNO055 initialized.\n");
+    sleep_ms(1000);
 }
-int16_t read_angle() {
+float read_angle() {
     uint8_t buffer[6];
     i2c_write_blocking(gyro_i2c, ADDRESS, (uint8_t[]){EULER_REGISTER}, 1, true); 
     i2c_read_blocking(gyro_i2c, ADDRESS, buffer, 6, false); 
-    return merge(buffer[0], buffer[1])/16.0;
+    return (float)merge(buffer[0], buffer[1])/16.0f;
 }
