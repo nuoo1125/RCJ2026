@@ -17,41 +17,61 @@
 float angle = 0;
 
 int main(){
-    stdio_init_all();
-    gpio_put(gyro_reset,1);
-    sleep_ms(100);
-    gpio_put(gyro_reset,0);
-    sleep_ms(1000);
-    init_bno055();
-    ControlPacket packet;
-    VL53L0X tof_left(tof_1,VL53L0X_DEFAULT_ADDRESS);
-    VL53L0X tof_right(tof_2,VL53L0X_DEFAULT_ADDRESS);    
-    DualMotor motor(dc_left_1,dc_left_2,true,dc_right_1,dc_right_2,true);
-    SERVO servo_left(servo_1);
-    SERVO servo_right(servo_2);
-    uart_init(UART_ID, BAUD_RATE);
-    gpio_set_function(tx_pin1, GPIO_FUNC_UART);
-    gpio_set_function(rx_pin1, GPIO_FUNC_UART);
-    //ここまで設定
-    led_on();
-    ws2812_program_init(WS2812_PIN,800000,IS_RGBW);
-    motor.run(0.8f,0.8f);
-    sleep_ms(200);
-    while(true) {
-        motor.turn(0);
-        blue_led();
-        sleep_ms(2000);
-        motor.turn(90);
-        red_led();
-        sleep_ms(2000);
-        motor.turn(180);
-        green_led();
-        sleep_ms(2000);
-        motor.turn(270);
+  stdio_init_all();
+  gpio_put(gyro_reset,1);
+  sleep_ms(100);
+  gpio_put(gyro_reset,0);
+  sleep_ms(1000);
+  init_bno055();
+  ControlPacket packet;
+  VL53L0X tof_left(tof_1,VL53L0X_DEFAULT_ADDRESS);
+  VL53L0X tof_right(tof_2,VL53L0X_DEFAULT_ADDRESS);    
+  DualMotor motor(dc_left_1,dc_left_2,true,dc_right_1,dc_right_2,true);
+  SERVO servo_left(servo_3);
+  SERVO servo_right(servo_2);
+  SERVO servo_kago(servo_1);
+  SERVO servo_arm(servo_4);
+  uart_init(UART_ID, BAUD_RATE);
+  gpio_set_function(tx_pin1, GPIO_FUNC_UART);
+  gpio_set_function(rx_pin1, GPIO_FUNC_UART);
+  //ここまで設定
+  led_on();
+  ws2812_program_init(WS2812_PIN,800000,IS_RGBW);
+  sleep_ms(200);
+  red_led();
+  servo_kago.run(100);
+  sleep_ms(500);
+  while(1){
+    if(camera_line(&packet)){
+      blue_led();
+      float angle = read_angle();
+      if(read_pitch() > 10.0f){
+        servo_kago.run(50);
+      }
+      else{
+        servo_kago.run(100);
+      }      
+      if(packet.state == 1){
+        motor.run(packet.left,packet.right);
+      }
+      else if(packet.state == 2){
+        motor.turn(angle - 90);
+      }
+      else if(packet.state == 3){
+        motor.turn(angle + 90);
+      }
+      else if(packet.state == 4){
+        motor.turn(angle + 180);
+      }
+      else if(packet.state == 5){
         yellow_led();
-        sleep_ms(2000);
-        // if(angle>180)blue_led();
-        // else red_led();
-        //camera_line(&packet);
+        motor.stop(5000);
+      }
+      else if(packet.state == 6){
+        green_led();
+        motor.stop(5000);
+      }
+      sleep_ms(50);
     }
+  }
 }

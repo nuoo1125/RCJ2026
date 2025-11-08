@@ -28,12 +28,12 @@
 #define servo_2 21 //わんちゃん干渉する
 #define servo_3 22 
 #define servo_4 27 
-//deabgu系
+//debagu系
 #define buzzer_pin 15
 #define led 25
 #define WS2812_PIN 1
 //センサ系
-#define UART_ID uart1
+#define UART_ID uart0
 #define BAUD_RATE 115200
 #define tx_pin1 12 
 #define rx_pin1 13 

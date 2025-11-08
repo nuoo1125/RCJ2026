@@ -18,16 +18,11 @@ void init_bno055() {
     gpio_set_function(gyro_scl, GPIO_FUNC_I2C);
     gpio_pull_up(gyro_sda);
     gpio_pull_up(gyro_scl);
-    // i2c_init(tof_1,100*1000);
-    // gpio_set_function(sda_tof1,GPIO_FUNC_I2C);
-    // gpio_set_function(scl_tof1,GPIO_FUNC_I2C);
-    // gpio_pull_up(sda_tof1);
-    // gpio_pull_up(scl_tof1);
-    // i2c_init(tof_1,100*1000);
-    // gpio_set_function(sda_tof2,GPIO_FUNC_I2C);
-    // gpio_set_function(scl_tof2,GPIO_FUNC_I2C);
-    // gpio_pull_up(sda_tof2);
-    // gpio_pull_up(scl_tof2);    
+    i2c_init(tof_1,100*1000);
+    gpio_set_function(sda_tof2,GPIO_FUNC_I2C);
+    gpio_set_function(scl_tof2,GPIO_FUNC_I2C);
+    gpio_pull_up(sda_tof2);
+    gpio_pull_up(scl_tof2);    
     i2c_write_blocking(gyro_i2c, ADDRESS, (uint8_t[]){0x00}, 1, true); 
     i2c_read_blocking(gyro_i2c, ADDRESS, &chip_id, 1, false); 
     if (chip_id != 0xA0) {
@@ -60,4 +55,10 @@ float read_angle() {
     i2c_write_blocking(gyro_i2c, ADDRESS, (uint8_t[]){EULER_REGISTER}, 1, true); 
     i2c_read_blocking(gyro_i2c, ADDRESS, buffer, 6, false); 
     return (float)merge(buffer[0], buffer[1])/16.0f;
+}
+float read_pitch() {
+    uint8_t buffer[2];
+    i2c_write_blocking(gyro_i2c, ADDRESS, (uint8_t[]){0x1E}, 1, true);
+    i2c_read_blocking(gyro_i2c, ADDRESS, buffer, 2, false);
+    return (float)merge(buffer[0], buffer[1]) / 16.0f;
 }
