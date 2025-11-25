@@ -27,9 +27,10 @@ class DualMotor{
         int pin2_r;
         void setPWM(int pin, float duty); 
     public:
+        float normalize_angle(float angle);
         DualMotor(int in1_l,int in2_l,bool forward_l,int in1_r,int in2_r,bool forward_r);
         void run(float speed_l,float spped_r);
-        void turn(int target_angle);
+        void turn(float target_angle);
         // void turnRight();
         void stop(float time);
 };

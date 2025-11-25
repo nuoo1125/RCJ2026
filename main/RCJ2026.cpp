@@ -6,6 +6,7 @@
 #include "hardware/pwm.h"
 #include "hardware/uart.h"
 #include "ws2812.pio.h"
+#include "hardware/adc.h"
 
 #include "config.h"
 #include "motor/motor.h"
@@ -14,8 +15,10 @@
 #include "servo/servo.h"
 #include "interface/interface.h"
 #include "camera/camera.h"
-float angle = 0;
 
+const uint16_t LOAD_THRESHOLD = 2200;
+const float PITCH_THRESHOLD = -10.0f;
+float obstacle_angle = 0.0f;
 int main(){
   stdio_init_all();
   gpio_put(gyro_reset,1);
@@ -25,53 +28,102 @@ int main(){
   init_bno055();
   ControlPacket packet;
   VL53L0X tof_left(tof_1,VL53L0X_DEFAULT_ADDRESS);
-  VL53L0X tof_right(tof_2,VL53L0X_DEFAULT_ADDRESS);    
-  DualMotor motor(dc_left_1,dc_left_2,true,dc_right_1,dc_right_2,true);
+  VL53L0X tof_right(tof_2,VL53L0X_DEFAULT_ADDRESS);
   SERVO servo_left(servo_3);
   SERVO servo_right(servo_2);
   SERVO servo_kago(servo_1);
   SERVO servo_arm(servo_4);
+  DualMotor motor(dc_left_1,dc_left_2,true,dc_right_1,dc_right_2,false);
   uart_init(UART_ID, BAUD_RATE);
   gpio_set_function(tx_pin1, GPIO_FUNC_UART);
   gpio_set_function(rx_pin1, GPIO_FUNC_UART);
-  //ここまで設定
+
+  adc_init();
+  adc_gpio_init(26);
+  adc_select_input(0);
+
   led_on();
   ws2812_program_init(WS2812_PIN,800000,IS_RGBW);
   sleep_ms(200);
   red_led();
-  servo_kago.run(100);
+
+  servo_arm.run(100);
   sleep_ms(500);
-  while(1){
-    if(camera_line(&packet)){
-      blue_led();
-      float angle = read_angle();
-      if(read_pitch() > 10.0f){
-        servo_kago.run(50);
+  motor.run(0.5f,0.5f);
+
+  bool obstacle = false;
+
+  while (1) {
+    if (!camera_line(&packet)) {
+      sleep_ms(10);
+      continue;
+    }
+    blue_led();
+    float angle = read_angle();
+    uint16_t load_cell = adc_read();
+    float pitch = read_pitch();
+    if(load_cell > LOAD_THRESHOLD){
+      obstacle_angle = read_angle();
+      obstacle = true;
+    }
+    if (obstacle) {
+      while (obstacle) {
+        if (camera_line(&packet) && packet.state == 7) {
+          obstacle = false;
+          break;
+        }
+        blue_led();
+        motor.run(-0.4f, -0.4f);
+        sleep_ms(800);
+        motor.stop(0);
+        motor.turn(read_angle() - 30.0f);
+        while (1) {
+          if (camera_line(&packet) && packet.state == 7) {
+            obstacle = false;
+            break;
+          }
+          motor.run(0.3f, 0.6f);
+          if (adc_read() > LOAD_THRESHOLD) {
+            motor.run(-0.4f, -0.4f);
+            sleep_ms(800);
+            motor.turn(read_angle() - 30.0f);
+          }
+        }
       }
-      else{
-        servo_kago.run(100);
-      }      
-      if(packet.state == 1){
-        motor.run(packet.left,packet.right);
-      }
-      else if(packet.state == 2){
-        motor.turn(angle - 90);
-      }
-      else if(packet.state == 3){
-        motor.turn(angle + 90);
-      }
-      else if(packet.state == 4){
-        motor.turn(angle + 180);
-      }
-      else if(packet.state == 5){
+      motor.turn(obstacle_angle);
+      continue;
+    }
+    if (pitch < PITCH_THRESHOLD) {
+      green_led();
+      servo_arm.run(100);
+      motor.stop(1000);
+      continue;
+    }
+    switch (packet.state) {
+      case 1:
+        motor.run(packet.left / 100.0f, packet.right / 100.0f);
+        break;
+      case 2:
+        motor.turn((angle - 90.0f));
+        break;
+      case 3:
+        motor.turn(angle + 90.0f);
+        break;
+      case 4:
+        motor.turn(angle + 180.0f);
+        break;
+      case 5:
         yellow_led();
         motor.stop(5000);
-      }
-      else if(packet.state == 6){
+        break;
+      case 6:
         green_led();
         motor.stop(5000);
-      }
-      sleep_ms(50);
+        break;
+      default:
+        motor.stop(500);
+        break;
     }
   }
+  return 0;
 }

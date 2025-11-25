@@ -17,8 +17,6 @@ static inline float bytes_to_float(uint8_t *data) {
 }
 bool camera_line(ControlPacket *pkt){
     uint8_t buf[PACKET_SIZE];
-
-    // ヘッダ待ち
     int b;
     do {
         b = uart_getc(UART_ID);

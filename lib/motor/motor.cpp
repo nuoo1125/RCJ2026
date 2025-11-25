@@ -22,7 +22,6 @@ TB67H450::TB67H450(int in1, int in2,bool forward) {
     pwm_set_enabled(slice2, true);
     stop(0); 
 }
-
 void TB67H450::setPWM(int pin, float duty) {
     duty = fminf(fmaxf(duty, 0.0f), 1.0f); 
     uint slice = pwm_gpio_to_slice_num(pin);
@@ -34,6 +33,8 @@ void TB67H450::run(float speed){
     if(!direction)speed *= -1;
     if(speed > 0.8f) speed = 0.8f;
     if(speed < -0.8f) speed = -0.8f;
+    if(0 < speed && speed < 0.2f) speed = 0.2f;
+    if(-0.2f < speed && speed < 0) speed = -0.2f;
     if(speed > 0.0f){
         setPWM(pin_in1, speed);
         setPWM(pin_in2, 0.0f); 
@@ -63,35 +64,37 @@ void DualMotor::setPWM(int pin, float duty) {
     uint channel = pwm_gpio_to_channel(pin);
     pwm_set_chan_level(slice, channel, (uint16_t)(duty * 24999));
 }
-
 void DualMotor::run(float speed_l,float speed_r){
     motor_r.run(speed_r);
     motor_l.run(speed_l);
 }
 
-void DualMotor::turn(int target_angle){
-    target_angle = (target_angle % 360 + 360) % 360;
-    if(target_angle < 0) target_angle += 360;
+float normalize360(float angle) {
+    while (angle >= 360.0f) angle -= 360.0f;
+    while (angle < 0.0f) angle += 360.0f;
+    return angle;
+}
+
+void DualMotor::turn(float target_angle){
+    target_angle = normalize360(target_angle);  
     while (true) {
-        float raw_angle = read_angle();
-        if (raw_angle < 0) raw_angle += 360.0f;
-        float current_angle = raw_angle;
+        float current_angle = normalize360(read_angle());  
         float diff = target_angle - current_angle;
-        if (diff > 180) diff -= 360;
-        if (diff < -180) diff += 360;
-        float speed = fminf(fmaxf(fabsf((float)diff) / 90.0f, 0.3f), 0.80f);
-        
-        if (fabs(diff) < 0.1f) {
+        if (diff > 180.0f) diff -= 360.0f;
+        if (diff < -180.0f) diff += 360.0f;
+        if (fabsf(diff) < 0.5f) { 
             stop(50);
             printf("finish! T:%.2f C:%.2f D:%.2f\n", target_angle, current_angle, diff);
             break;
         }
+        float speed = fminf(fmaxf(fabsf(diff) / 90.0f, 0.4f), 0.8f);
+
         if (diff > 0) {
-            motor_r.run(-speed);
-            motor_l.run(speed);
-        } else {
             motor_r.run(speed);
             motor_l.run(-speed);
+        } else {
+            motor_r.run(-speed);
+            motor_l.run(speed);
         }
 
         printf("T:%.2f C:%.2f D:%.2f\n", target_angle, current_angle, diff);
