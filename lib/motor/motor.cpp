@@ -33,8 +33,8 @@ void TB67H450::run(float speed){
     if(!direction)speed *= -1;
     if(speed > 0.8f) speed = 0.8f;
     if(speed < -0.8f) speed = -0.8f;
-    if(0 < speed && speed < 0.2f) speed = 0.2f;
-    if(-0.2f < speed && speed < 0) speed = -0.2f;
+    if(0 < speed && speed < 0.4f) speed = 0.4f;
+    if(-0.4f < speed && speed < 0) speed = -0.4f;
     if(speed > 0.0f){
         setPWM(pin_in1, speed);
         setPWM(pin_in2, 0.0f); 
@@ -87,7 +87,7 @@ void DualMotor::turn(float target_angle){
             printf("finish! T:%.2f C:%.2f D:%.2f\n", target_angle, current_angle, diff);
             break;
         }
-        float speed = fminf(fmaxf(fabsf(diff) / 90.0f, 0.4f), 0.8f);
+        float speed = fminf(fmaxf(fabsf(diff) / 90.0f, 0.4f), 0.6f);
 
         if (diff > 0) {
             motor_r.run(speed);
