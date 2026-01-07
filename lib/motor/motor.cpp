@@ -4,6 +4,9 @@
 #include "motor.h"
 #include "hardware/pwm.h"
 #include "gyro.h"
+#include "camera.h"
+
+
 TB67H450::TB67H450(int in1, int in2,bool forward) {
     pin_in1 = in1;
     pin_in2 = in2;
@@ -33,8 +36,9 @@ void TB67H450::run(float speed){
     if(!direction)speed *= -1;
     if(speed > 0.8f) speed = 0.8f;
     if(speed < -0.8f) speed = -0.8f;
-    if(0 < speed && speed < 0.4f) speed = 0.4f;
-    if(-0.4f < speed && speed < 0) speed = -0.4f;
+    if(speed == 0.0f) speed = 0.4f;
+    if(0 < speed && speed < 0.2f) speed = 0.2f;
+    if(-0.2f < speed && speed < 0) speed = -0.2f;
     if(speed > 0.0f){
         setPWM(pin_in1, speed);
         setPWM(pin_in2, 0.0f); 
@@ -74,30 +78,63 @@ float normalize360(float angle) {
     while (angle < 0.0f) angle += 360.0f;
     return angle;
 }
-
-void DualMotor::turn(float target_angle){
+void DualMotor::obstacle_turn(float target_angle){
     target_angle = normalize360(target_angle);  
+        while (true) {
+        float current_angle = normalize360(read_angle());  
+        float diff = target_angle - current_angle;
+        if (diff > 180.0f) diff -= 360.0f;
+        if (diff < -180.0f) diff += 360.0f;
+        if (fabsf(diff) < 1.0f) { 
+            stop(50);
+           // printf("finish! T:%.2f C:%.2f D:%.2f\n", target_angle, current_angle, diff);
+            break;
+        }
+        float speed = fminf(fmaxf(fabsf(diff) / 90.0f, 0.35f), 0.5f);
+
+        if (diff > 0) {
+            motor_r.run(-speed);
+            motor_l.run(speed);
+        } else {
+            motor_r.run(speed);
+            motor_l.run(-speed);
+        }
+    }
+}
+void DualMotor::turn(float target_angle, int photo_forward){
+    target_angle = normalize360(target_angle);  
+    uint16_t photo_data[16];
+    int photo_th[16];
+
+    float r1, g1, b1, r2, g2, b2;
+    uint16_t tof = 0, loadcell = 0;
     while (true) {
         float current_angle = normalize360(read_angle());  
         float diff = target_angle - current_angle;
         if (diff > 180.0f) diff -= 360.0f;
         if (diff < -180.0f) diff += 360.0f;
-        if (fabsf(diff) < 0.5f) { 
+        if (fabsf(diff) < 20.0f && photo_forward == 1) { 
             stop(50);
-            printf("finish! T:%.2f C:%.2f D:%.2f\n", target_angle, current_angle, diff);
+           // printf("finish! T:%.2f C:%.2f D:%.2f\n", target_angle, current_angle, diff);
             break;
         }
-        float speed = fminf(fmaxf(fabsf(diff) / 90.0f, 0.4f), 0.6f);
+        float speed = fminf(fmaxf(fabsf(diff) / 90.0f, 0.30f), 0.4f);
 
         if (diff > 0) {
-            motor_r.run(speed);
-            motor_l.run(-speed);
-        } else {
             motor_r.run(-speed);
             motor_l.run(speed);
+        } else {
+            motor_r.run(speed);
+            motor_l.run(-speed);
         }
+    
+     //   printf("T:%.2f C:%.2f D:%.2f\n", target_angle, current_angle, diff);
+        line(photo_data, &loadcell, &tof,&r1, &g1, &b1, &r2, &g2, &b2);
+        if(photo_data[7] >= 1600)photo_forward = 1;
+        else photo_forward = 0;
+        printf("%d",photo_data[7]);
+        printf("%d\n",photo_forward);
 
-        printf("T:%.2f C:%.2f D:%.2f\n", target_angle, current_angle, diff);
         sleep_ms(20);
     }
 }
