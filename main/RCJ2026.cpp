@@ -25,7 +25,7 @@ int photo_th[16];
 
 float r1, g1, b1, r2, g2, b2;
 uint16_t tof = 0, loadcell = 0;
-
+uint16_t sum_l = 0 , sum_r = 0;
 uint16_t left_sum_photo = 0;
 uint16_t right_sum_photo = 0;
 uint16_t all_sum_photo = 0;
@@ -36,12 +36,12 @@ float last_line_position = 0.0f;
 float diff = 0.0f;
 
 float base_speed = 0.28f;
-float p = 0.04f;
+float p = 0.042f;
 float d = 0.03f;
 
-int loadcell_threshold = 1860;
-uint16_t photo_threshold = 700;
-uint16_t photo_forward = 2200;
+int loadcell_threshold = 3000;
+uint16_t photo_threshold = 800;
+uint16_t photo_forward = 1300;
 float pitch_threshold = -10.0f;
 
 int center_ms = 750;
@@ -53,6 +53,7 @@ float line_lose = 0.0f;
 int line_skip = 0;
 
 int weight[16] = {-7,-6,-5,-4,-3,-2,-1,0,0,1,2,3,4,5,6,7};
+
 linestate detect_state(uint16_t photo_data[16], uint16_t *loadcell, uint16_t *tof, float *r1, float *g1, float *b1, float *r2, float *g2, float *b2){
     left_sum_photo = right_sum_photo = all_sum_photo = 0;
     line_position = 0.0f;
@@ -72,13 +73,13 @@ linestate detect_state(uint16_t photo_data[16], uint16_t *loadcell, uint16_t *to
     forward_photo = photo_th[7];
     all_sum_photo = left_sum_photo + right_sum_photo;
     if(all_sum_photo + forward_photo == 0)return LINE_LOST;
-    if(all_sum_photo >= 10 &&(color_flag_l == 0 || color_flag_r == 0))return LINE_CROSS;
+    if(all_sum_photo >= 7 &&(color_flag_l == 0 || color_flag_r == 0))return LINE_CROSS;
     if(all_sum_photo >= 10 && (color_flag_l + color_flag_r == 0)) return LINE_T;
-    if(forward_photo == 1 && (left_sum_photo >=  7 && right_sum_photo <= 2))return LINE_T;
-    if(forward_photo == 1 && (right_sum_photo >= 7 && left_sum_photo <= 2))return LINE_T;
+    if(forward_photo == 1 && (left_sum_photo >=  6 && right_sum_photo <= 1))return LINE_T;
+    if(forward_photo == 1 && (right_sum_photo >= 6 && left_sum_photo <= 1))return LINE_T;
     if(forward_photo == 0 && (left_sum_photo >= 6 && right_sum_photo <= 2))return LINE_ZIGUZAG;
     if(forward_photo == 0 && (right_sum_photo >= 6 && left_sum_photo <= 2))return LINE_ZIGUZAG;
-    if(abs(left_sum_photo - right_sum_photo) >= 4)return LINE_CURVE;
+    if(abs(left_sum_photo - right_sum_photo) >= 3)return LINE_CURVE;
     return LINE_NORMAL;
 }
 void calc_error(uint16_t photo_data[16]){
@@ -96,10 +97,13 @@ void calc_error(uint16_t photo_data[16]){
 }
 void linetrace(DualMotor &motor, uint16_t photo_data[16], uint16_t *loadcell, uint16_t *tof, float *r1, float *g1, float *b1, float *r2, float *g2, float *b2){
     linestate state = detect_state(photo_data, loadcell, tof, r1, g1, b1, r2, g2, b2);
-    printf("| LEFT R:%.2f G:%.2f B:%.2f | RIGHT R:%.2f G:%.2f B:%.2f\n",*r1, *g1, *b1, *r2, *g2, *b2);
+    // printf("| LEFT R:%.2f G:%.2f B:%.2f | RIGHT R:%.2f G:%.2f B:%.2f\n",*r1, *g1, *b1, *r2, *g2, *b2);
+    // printf("LEFT_SUM:%d | RIGHT_SUM:%d\n",sum_l,sum_r);
     bool edge_l = false;
     bool edge_r = false;
-    calc_error(photo_data);
+    if(state != LINE_LOST){
+        calc_error(photo_data);
+    }
     switch(state){
         case LINE_NORMAL:
             red_led();
@@ -107,13 +111,19 @@ void linetrace(DualMotor &motor, uint16_t photo_data[16], uint16_t *loadcell, ui
                 base_speed + p * line_position + d * diff,
                 base_speed - p * line_position - d * diff
             );
+            printf("LEFT:%.2f RIGHT: %.2f\n",base_speed + p * line_position + d * diff,base_speed - p * line_position - d * diff);
             break;
         case LINE_CURVE:
             blue_led();
-            motor.run(
-                0.26f + 0.045 * line_position + 0.05 * diff,
-                0.26f - 0.045 * line_position - 0.05 * diff
-            );
+            printf("カーブ\n");
+            if(line_position > 0){
+                motor.run(0.45f,-0.45f);
+
+            }
+            else{
+                motor.run(-0.45f,0.45f);
+
+            }
             break;
         case LINE_ZIGUZAG:
             white_led();
@@ -122,7 +132,7 @@ void linetrace(DualMotor &motor, uint16_t photo_data[16], uint16_t *loadcell, ui
                 motor.run(0.30f, 0.30f);
                 sleep_ms(center_ms);
                 motor.turn(read_angle() + 90,forward_photo);
-                motor.run(base_speed, base_speed);
+                motor.run(0.30f, 0.30f);
                 sleep_ms(700);
             }
             else{
@@ -130,14 +140,13 @@ void linetrace(DualMotor &motor, uint16_t photo_data[16], uint16_t *loadcell, ui
                 motor.run(0.30f, 0.30f);
                 sleep_ms(center_ms);
                 motor.turn(read_angle() - 90,forward_photo);
-                motor.run(base_speed, base_speed);
+                motor.run(0.30f, 0.30f);
                 sleep_ms(700);
             }
             break;
         case LINE_T:
             buzzer();
-    
-            motor.run(base_speed, base_speed);
+            motor.run(0.30f, 0.30f);
             sleep_ms(300);  
             break;
         case LINE_CROSS:
@@ -147,21 +156,24 @@ void linetrace(DualMotor &motor, uint16_t photo_data[16], uint16_t *loadcell, ui
             sleep_ms(center_ms);
             motor.stop(200);
             if(color_flag_l == 0 && color_flag_r == 0){
-                motor.obstacle_turn(read_angle() - 180);
+                motor.turn(read_angle() - 180,forward_photo);
             }
             else if(color_flag_l == 0){
-                motor.obstacle_turn(read_angle() - 90);
+                motor.turn(read_angle() - 90,forward_photo);
             }
             else if(color_flag_r == 0){
-                motor.obstacle_turn(read_angle() + 90);
+                motor.turn(read_angle() + 90,forward_photo);
             }
             motor.stop(300);
-            motor.run(base_speed, base_speed);
+            motor.run(0.30f, 0.30f);
             sleep_ms(700);
             break;
         case LINE_LOST:
             buzzer();
-            motor.run(base_speed, base_speed);
+            line_position = 0.0f;
+            last_line_position = 0.0f;
+            diff = 0.0f;
+            motor.run(0.30f, 0.30f);
             line_lose = true;
             sleep_ms(300);
             break;
@@ -183,40 +195,73 @@ int main(){
     sleep_ms(100);
     init_bno055();
 
-    SERVO servo_arm(servo_3);
-    SERVO servo_left(servo_2);
-    SERVO servo_right(servo_1);
-    SERVO servo_kago(servo_4);
-    DualMotor motor(dc_left_1, dc_left_2, false,
-                    dc_right_1, dc_right_2, false);
+    SERVO servo_arm(servo_4);//135 to 20
+    SERVO servo_left(servo_2);//100 to 50
+    SERVO servo_right(servo_1); //100 to 40
+   // SERVO servo_kago(servo_3);//干渉
+   DualMotor motor(dc_left_1, dc_left_2, false,
+                   dc_right_1, dc_right_2, false);
 
     ws2812_program_init(WS2812_PIN, 800000, IS_RGBW);
     led_on();
     buzzer();
     sleep_ms(500);
+    servo_arm.run(20);
     while(1){
-        if(line(photo_data, &loadcell, &tof,&r1, &g1, &b1, &r2, &g2, &b2)){
-        if(line_skip < 5){
-            line_skip++;
-            motor.stop(10);  
-            continue;        
-        }
-            red_led();
-            printf("MID_PHOTO : %d\n",photo_data[7]);
-            printf("LOAD_CELL : %d\n",loadcell);
-            if(read_pitch() <= pitch_threshold){
-                base_speed = 0.5f;
-            }else if(read_pitch() >= -pitch_threshold){
-                base_speed = 0.21;
+        if(line(photo_data, &loadcell,&sum_l,&sum_r, &tof,&r1, &g1, &b1, &r2, &g2, &b2)){
+            printf("| LEFT R:%.2f G:%.2f B:%.2f | RIGHT R:%.2f G:%.2f B:%.2f\n",r1, g1, b1, r2, g2, b2);
+            printf("LEFT_SUM:%d | RIGHT_SUM:%d\n",sum_l,sum_r);
+            for(int i = 0; i < 16;i++){
+                printf("%d ",photo_data[i]);
             }
-            else{
-                base_speed = 0.30f;
-            }
-            linetrace(motor, photo_data, &loadcell, &tof, &r1, &g1, &b1, &r2, &g2, &b2);
-        }
-        else{
-            yellow_led();
-            motor.stop(200);
-        }
-    }
-}
+            printf("\n");
+        }}}
+//         if(line_skip < 5){
+//             line_skip++;
+//             motor.stop(10);  
+//             continue;        
+//         }
+
+//         red_led();
+//         if(read_pitch() <= pitch_threshold){
+//             base_speed = 0.5f;
+//             saka = true;
+//         }else if(read_pitch() >= -pitch_threshold){
+//             base_speed = 0.22f;
+//             saka = true;
+//         }
+//         else{
+//             base_speed = 0.28f;
+//             saka = false;
+//         }
+//         if((loadcell >= loadcell_threshold) && (saka == false)){
+//             obstacle_angle = read_angle();
+//             motor.run(-0.30f,-0.30f);
+//             sleep_ms(1500);
+//             motor.obstacle_turn(read_angle()+90);
+//             motor.run(0.30f,0.30f);
+//             sleep_ms(2200);
+//             motor.obstacle_turn(read_angle()-90);
+//             motor.run(0.30f,0.30f);
+//             sleep_ms(3500);
+//             motor.obstacle_turn(read_angle()-90);
+//             motor.run(0.30f,0.30f);
+//             sleep_ms(2200);
+//             while(photo_th[7] == 0){
+//                 motor.run(0.30f,0.30f);
+//                 line(photo_data, &loadcell,&sum_l,&sum_r, &tof,&r1, &g1, &b1, &r2, &g2, &b2);
+//             }
+//             motor.stop(100);
+//             motor.run(0.30f,0.30f);
+//             sleep_ms(500);
+//             motor.turn(obstacle_angle,forward_photo);
+
+//         }
+//         linetrace(motor, photo_data, &loadcell, &tof, &r1, &g1, &b1, &r2, &g2, &b2);   
+//     }
+//         else{
+//             yellow_led();
+//             motor.stop(200);
+//         }
+//     }
+// }

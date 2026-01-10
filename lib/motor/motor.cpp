@@ -36,9 +36,8 @@ void TB67H450::run(float speed){
     if(!direction)speed *= -1;
     if(speed > 0.8f) speed = 0.8f;
     if(speed < -0.8f) speed = -0.8f;
-    if(speed == 0.0f) speed = 0.4f;
-    if(0 < speed && speed < 0.2f) speed = 0.2f;
-    if(-0.2f < speed && speed < 0) speed = -0.2f;
+    if(0 <= speed && speed < 0.22f) speed = 0.22f;
+    if(-0.22f < speed && speed < 0) speed = -0.22f;
     if(speed > 0.0f){
         setPWM(pin_in1, speed);
         setPWM(pin_in2, 0.0f); 
@@ -103,22 +102,23 @@ void DualMotor::obstacle_turn(float target_angle){
 }
 void DualMotor::turn(float target_angle, int photo_forward){
     target_angle = normalize360(target_angle);  
+    uint16_t sum_l = 0,sum_r = 0;
     uint16_t photo_data[16];
-    int photo_th[16];
-
-    float r1, g1, b1, r2, g2, b2;
+    float r1,g1,b1,r2,g2,b2;
     uint16_t tof = 0, loadcell = 0;
+
     while (true) {
-        float current_angle = normalize360(read_angle());  
+        float current_angle = normalize360(read_angle());
         float diff = target_angle - current_angle;
-        if (diff > 180.0f) diff -= 360.0f;
-        if (diff < -180.0f) diff += 360.0f;
-        if (fabsf(diff) < 20.0f && photo_forward == 1) { 
+        if (diff > 180) diff -= 360;
+        if (diff < -180) diff += 360;
+
+        if (fabsf(diff) < 3.0f) {
             stop(50);
-           // printf("finish! T:%.2f C:%.2f D:%.2f\n", target_angle, current_angle, diff);
             break;
         }
-        float speed = fminf(fmaxf(fabsf(diff) / 90.0f, 0.30f), 0.4f);
+
+        float speed = fminf(fmaxf(fabsf(diff) / 90.0f, 0.4f), 0.5f);
 
         if (diff > 0) {
             motor_r.run(-speed);
@@ -127,15 +127,49 @@ void DualMotor::turn(float target_angle, int photo_forward){
             motor_r.run(speed);
             motor_l.run(-speed);
         }
-    
-     //   printf("T:%.2f C:%.2f D:%.2f\n", target_angle, current_angle, diff);
-        line(photo_data, &loadcell, &tof,&r1, &g1, &b1, &r2, &g2, &b2);
-        if(photo_data[7] >= 1600)photo_forward = 1;
-        else photo_forward = 0;
-        printf("%d",photo_data[7]);
-        printf("%d\n",photo_forward);
+        sleep_ms(10);
+    }
 
-        sleep_ms(20);
+    /* =========================
+     * ② 首振りでライン復帰
+     * ========================= */
+    float base_angle = target_angle;
+    float swing = 10.0f;          // 首振り角度
+    int dir = 1;                  // 1:右 → -1:左
+    float swing_target = base_angle + swing;
+
+    while (true) {
+        float current_angle = normalize360(read_angle());
+        float diff = swing_target - current_angle;
+        if (diff > 180) diff -= 360;
+        if (diff < -180) diff += 360;
+
+        /* --- ラインは常に監視 --- */
+        line(photo_data, &loadcell, &tof,&sum_l,&sum_r,
+             &r1,&g1,&b1,&r2,&g2,&b2);
+
+        if (photo_data[7] >= 1600) {
+            stop(50);
+            return;   // 即復帰
+        }
+
+        /* --- モータ制御 --- */
+        float speed = 0.4f;
+        if (diff > 0) {
+            motor_r.run(-speed);
+            motor_l.run(speed);
+        } else {
+            motor_r.run(speed);
+            motor_l.run(-speed);
+        }
+
+        /* --- 行き切ったら反転 --- */
+        if (fabsf(diff) < 2.0f) {
+            dir = -dir;
+            swing_target = base_angle + dir * swing;
+        }
+
+        sleep_ms(10);
     }
 }
 
