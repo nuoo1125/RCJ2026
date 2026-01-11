@@ -38,7 +38,7 @@ void TB67H450::run(float speed){
     if(speed < -0.8f) speed = -0.8f;
     if(0 <= speed && speed < 0.22f) speed = 0.22f;
     if(-0.22f < speed && speed < 0) speed = -0.22f;
-    if(speed > 0.0f){
+    if(speed >= 0.0f){
         setPWM(pin_in1, speed);
         setPWM(pin_in2, 0.0f); 
     } 
@@ -49,8 +49,8 @@ void TB67H450::run(float speed){
 }
 
 void TB67H450::stop(float time) {
-    setPWM(pin_in1, 1.0f);
-    setPWM(pin_in2, 1.0f);
+    setPWM(pin_in1, 0.0f);
+    setPWM(pin_in2, 0.0f);
     sleep_ms(time);
 }
 DualMotor::DualMotor(int in1_l, int in2_l, bool forward_l, int in1_r, int in2_r, bool forward_r)
@@ -79,6 +79,7 @@ float normalize360(float angle) {
 }
 void DualMotor::obstacle_turn(float target_angle){
     target_angle = normalize360(target_angle);  
+    
         while (true) {
         float current_angle = normalize360(read_angle());  
         float diff = target_angle - current_angle;
@@ -100,73 +101,85 @@ void DualMotor::obstacle_turn(float target_angle){
         }
     }
 }
-void DualMotor::turn(float target_angle, int photo_forward){
-    target_angle = normalize360(target_angle);  
-    uint16_t sum_l = 0,sum_r = 0;
+void DualMotor::turn(float target_angle, int photo_forward)
+{
+    uint16_t sum_l = 0, sum_r = 0;
     uint16_t photo_data[16];
-    float r1,g1,b1,r2,g2,b2;
+    int photo_th[16];
+
+    float r1, g1, b1, r2, g2, b2;
     uint16_t tof = 0, loadcell = 0;
 
-    while (true) {
+    /* =========================
+     * ① 中央センサが黒になるまで旋回
+     * ========================= */
         float current_angle = normalize360(read_angle());
         float diff = target_angle - current_angle;
-        if (diff > 180) diff -= 360;
-        if (diff < -180) diff += 360;
-
-        if (fabsf(diff) < 3.0f) {
+        float speed = 0.42f;
+        if(diff > 0){
+            motor_r.run(-speed);
+            motor_l.run(speed);
+        }
+        else{
+            motor_r.run(speed);
+            motor_l.run(-speed);
+        }
+        sleep_ms(1000);
+            setPWM(pin1_l,1.0f);    
+            setPWM(pin1_r,1.0f);  
+            setPWM(pin2_l,1.0f);  
+            setPWM(pin2_r,1.0f);  
+    while (true) {
+        current_angle = normalize360(read_angle());
+        diff = target_angle - current_angle;
+        line(photo_data, &loadcell, &tof,
+             &sum_l, &sum_r,
+             &r1, &g1, &b1, &r2, &g2, &b2);
+        for (int i = 0; i < 16; i++) {
+            photo_th[i] = (photo_data[i] >= 1800) ? 1 : 0;
+        }
+        if (photo_th[7] >= 1) {
             stop(50);
             break;
         }
 
-        float speed = fminf(fmaxf(fabsf(diff) / 90.0f, 0.4f), 0.5f);
-
-        if (diff > 0) {
+        if(diff > 0){
             motor_r.run(-speed);
             motor_l.run(speed);
-        } else {
+        }
+        else{
             motor_r.run(speed);
             motor_l.run(-speed);
         }
+
         sleep_ms(10);
     }
 
     /* =========================
-     * ② 首振りでライン復帰
+     * ② 首振りでライン復帰（gyroなし）
      * ========================= */
-    float base_angle = target_angle;
-    float swing = 10.0f;          // 首振り角度
-    int dir = 1;                  // 1:右 → -1:左
-    float swing_target = base_angle + swing;
+    int dir = 1;                 // 1:右 → -1:左
+    absolute_time_t t0 = get_absolute_time();
 
     while (true) {
-        float current_angle = normalize360(read_angle());
-        float diff = swing_target - current_angle;
-        if (diff > 180) diff -= 360;
-        if (diff < -180) diff += 360;
+        line(photo_data, &loadcell, &tof,
+             &sum_l, &sum_r,
+             &r1, &g1, &b1, &r2, &g2, &b2);
 
-        /* --- ラインは常に監視 --- */
-        line(photo_data, &loadcell, &tof,&sum_l,&sum_r,
-             &r1,&g1,&b1,&r2,&g2,&b2);
-
-        if (photo_data[7] >= 1600) {
+        for (int i = 0; i < 16; i++) {
+            photo_th[i] = (photo_data[i] >= 1300) ? 1 : 0;
+        }
+        if (photo_th[7] >= 1) {
             stop(50);
-            return;   // 即復帰
+            return;
         }
+        float speed = 0.35f;
+        motor_r.run(-dir * speed);
+        motor_l.run(dir * speed);
 
-        /* --- モータ制御 --- */
-        float speed = 0.4f;
-        if (diff > 0) {
-            motor_r.run(-speed);
-            motor_l.run(speed);
-        } else {
-            motor_r.run(speed);
-            motor_l.run(-speed);
-        }
-
-        /* --- 行き切ったら反転 --- */
-        if (fabsf(diff) < 2.0f) {
+        if (absolute_time_diff_us(t0, get_absolute_time()) > 250000) {
             dir = -dir;
-            swing_target = base_angle + dir * swing;
+            t0 = get_absolute_time();
         }
 
         sleep_ms(10);
@@ -174,10 +187,11 @@ void DualMotor::turn(float target_angle, int photo_forward){
 }
 
 
+
 void DualMotor::stop(float time){
-    setPWM(pin1_l,1.0f);    
-    setPWM(pin1_r,1.0f);  
-    setPWM(pin2_l,1.0f);  
-    setPWM(pin2_r,1.0f);  
+    setPWM(pin1_l,0.0f);    
+    setPWM(pin1_r,0.0f);  
+    setPWM(pin2_l,0.0f);  
+    setPWM(pin2_r,0.0f);  
     sleep_ms(time);
 }
