@@ -131,7 +131,7 @@ void linetrace(DualMotor &motor, uint16_t photo_data[16], uint16_t *loadcell, ui
                 motor.stop(500);
                 motor.run(0.30f, 0.30f);
                 sleep_ms(center_ms);
-                motor.turn(read_angle() + 90,forward_photo);
+                motor.obstacle_turn(read_angle() + 90);
                 motor.run(0.30f, 0.30f);
                 sleep_ms(700);
             }
@@ -139,7 +139,7 @@ void linetrace(DualMotor &motor, uint16_t photo_data[16], uint16_t *loadcell, ui
                 motor.stop(500);
                 motor.run(0.30f, 0.30f);
                 sleep_ms(center_ms);
-                motor.turn(read_angle() - 90,forward_photo);
+                motor.obstacle_turn(read_angle() - 90);
                 motor.run(0.30f, 0.30f);
                 sleep_ms(700);
             }
@@ -159,10 +159,10 @@ void linetrace(DualMotor &motor, uint16_t photo_data[16], uint16_t *loadcell, ui
                 motor.obstacle_turn(read_angle() - 180);
             }
             else if(color_flag_l == 0){
-                motor.turn(read_angle() - 90,forward_photo);
+                motor.obstacle_turn(read_angle() - 90);
             }
             else if(color_flag_r == 0){
-                motor.turn(read_angle() + 90,forward_photo);
+                motor.obstacle_turn(read_angle() + 90);
             }
             motor.stop(300);
             motor.run(0.30f, 0.30f);
@@ -173,11 +173,9 @@ void linetrace(DualMotor &motor, uint16_t photo_data[16], uint16_t *loadcell, ui
             line_position = 0.0f;
             last_line_position = 0.0f;
             diff = 0.0f;
-            motor.obstacle_turn(0);
-            sleep_ms(1000);
             motor.run(0.30f, 0.30f);
             line_lose = true;
-            sleep_ms(1000);
+            sleep_ms(100);
             break;
         default:
             buzzer();
@@ -235,7 +233,7 @@ int main(){
         }
         else{
             servo_arm.run(20);
-            base_speed = 0.28f;
+            base_speed = 0.30f;
             if(saka == true){
                 base_speed = 0.5f;
             }
