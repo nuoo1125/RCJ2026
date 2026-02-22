@@ -273,9 +273,9 @@ int main(){
         // }
         //linetrace(motor, photo_data, &loadcell, &tof, &r1, &g1, &b1, &r2, &g2, &b2);   
     }
-        else{
-            yellow_led();
-            //motor.stop(200);
-        }
-    }
+        // else{
+        //     yellow_led();
+        //     //motor.stop(200);
+        // }
+    
 }
