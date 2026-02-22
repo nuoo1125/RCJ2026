@@ -198,47 +198,61 @@ int main(){
     SERVO servo_arm(servo_4);//135 to 20
     SERVO servo_left(servo_2);//100 to 50
     SERVO servo_right(servo_1); //100 to 40
-   // SERVO servo_kago(servo_3);//干渉
-   DualMotor motor(dc_left_1, dc_left_2, false,dc_right_1, dc_right_2, false);
+    SERVO servo_kago(servo_3);//干渉
+   //DualMotor motor(dc_left_1, dc_left_2, false,dc_right_1, dc_right_2, false);
     ws2812_program_init(WS2812_PIN, 800000, IS_RGBW);
     led_on();
     buzzer();
     sleep_ms(500);
     servo_arm.run(20);
+    servo_left.run(100);
+    servo_right.run(100);
     while(1){
-        if(line(photo_data, &loadcell,&sum_l,&sum_r, &tof,&r1, &g1, &b1, &r2, &g2, &b2)){
-            printf("| LEFT R:%.2f G:%.2f B:%.2f | RIGHT R:%.2f G:%.2f B:%.2f\n",r1, g1, b1, r2, g2, b2);
-            printf("LEFT_SUM:%d | RIGHT_SUM:%d\n",sum_l,sum_r);
-            for(int i = 0; i < 16;i++){
-                printf("%d ",photo_data[i]);
-            }
-            printf("\n");
-        if(line_skip < 5){
-            line_skip++;
-            motor.stop(10);  
-            continue;        
-        }
-        red_led();
-        if(read_pitch() <= pitch_threshold){
-            servo_arm.run(120);
-            sleep_ms(20);
-            base_speed = 0.5f;
-            saka = true;
-        }else if(read_pitch() >= -pitch_threshold){
-            servo_arm.run(120);
-            motor.stop(1000);
-            sleep_ms(20);
-            base_speed = 0.22f;
-            saka = true;
-        }
-        else{
-            servo_arm.run(20);
-            base_speed = 0.30f;
-            if(saka == true){
-                base_speed = 0.5f;
-            }
-            saka = false;
-        }
+        seervo_arm.run(135);
+        sleep_ms(1000);
+        servo_left.run(50);
+        servo_right.run(40);
+        sleep_ms(1000);
+        servo_arm.run(20);
+        sleep_ms(1000);
+        servo_left.run(100);
+        sleep_ms(1000);
+        servo_left.run(100);
+        servo_right.run(100);
+        sleep_ms(1000)
+        // if(line(photo_data, &loadcell,&sum_l,&sum_r, &tof,&r1, &g1, &b1, &r2, &g2, &b2)){
+        //     printf("| LEFT R:%.2f G:%.2f B:%.2f | RIGHT R:%.2f G:%.2f B:%.2f\n",r1, g1, b1, r2, g2, b2);
+        //     printf("LEFT_SUM:%d | RIGHT_SUM:%d\n",sum_l,sum_r);
+        //     for(int i = 0; i < 16;i++){
+        //         printf("%d ",photo_data[i]);
+        //     }
+        //     printf("\n");
+        // if(line_skip < 5){
+        //     line_skip++;
+        //     motor.stop(10);  
+        //     continue;        
+        // }
+        // red_led();
+        // if(read_pitch() <= pitch_threshold){
+        //     servo_arm.run(120);
+        //     sleep_ms(20);
+        //     base_speed = 0.5f;
+        //     saka = true;
+        // }else if(read_pitch() >= -pitch_threshold){
+        //     servo_arm.run(120);
+        //     motor.stop(1000);
+        //     sleep_ms(20);
+        //     base_speed = 0.22f;
+        //     saka = true;
+        // }
+        // else{
+        //     servo_arm.run(20);
+        //     base_speed = 0.30f;
+        //     if(saka == true){
+        //         base_speed = 0.5f;
+        //     }
+        //     saka = false;
+        // }
         // if((loadcell >= 2200) && (saka == false)){
         //     obstacle_angle = read_angle();
         //     motor.run(-0.30f,-0.30f);
@@ -257,11 +271,11 @@ int main(){
         //     motor.run(0.30f,0.30f);
         //     sleep_ms(500);
         // }
-        linetrace(motor, photo_data, &loadcell, &tof, &r1, &g1, &b1, &r2, &g2, &b2);   
+        //linetrace(motor, photo_data, &loadcell, &tof, &r1, &g1, &b1, &r2, &g2, &b2);   
     }
         else{
             yellow_led();
-            motor.stop(200);
+            //motor.stop(200);
         }
     }
 }
